@@ -3,142 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CallPlay - P2P Chat & Video</title>
-    <!-- PeerJS Library (No backend needed) -->
+    <title>CallPlay Fix</title>
     <script src="https://unpkg.com"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-        .video-box { aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); }
+        .vid-card { border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
-<body class="flex flex-col items-center p-6 min-h-screen">
+<body class="bg-[#020617] text-slate-200 min-h-screen p-4 md:p-8 font-sans">
 
-    <div class="glass w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl">
-        <!-- Control Panel -->
-        <div class="p-6 md:w-80 border-r border-white/10 flex flex-col gap-6">
-            <h1 class="text-2xl font-black text-blue-400 italic">CALLPLAY</h1>
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sidebar: Setup -->
+        <div class="glass p-6 rounded-3xl flex flex-col gap-6 shadow-xl">
+            <h1 class="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">CALLPLAY</h1>
             
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase">Your Personal ID</p>
-                <div class="flex items-center gap-2 mt-2">
-                    <code id="my-id" class="bg-black/40 p-2 rounded flex-1 text-sm truncate">Connecting...</code>
-                    <button onclick="copyID()" class="bg-blue-600 hover:bg-blue-500 p-2 rounded text-xs">Copy</button>
+            <div class="space-y-2">
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">My Identity</label>
+                <div class="flex flex-col gap-2">
+                    <input id="custom-id" type="text" placeholder="Type a cool name..." class="bg-slate-900/50 border border-slate-700 p-3 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <button onclick="initPeer()" id="init-btn" class="bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition-all active:scale-95">Go Online</button>
                 </div>
+                <div id="status" class="text-[11px] text-yellow-500 font-mono mt-2 italic">Offline - Enter a name to start</div>
             </div>
 
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase">Friend's ID</p>
-                <input id="peer-id" type="text" placeholder="Paste ID here" class="w-full bg-black/40 border border-white/10 p-2 rounded mt-2 text-sm">
-                <div class="flex gap-2 mt-2">
-                    <button onclick="connectToPeer()" class="flex-1 bg-green-600 hover:bg-green-500 py-2 rounded text-sm font-bold">Connect</button>
-                    <button onclick="makeCall()" class="flex-1 bg-purple-600 hover:bg-purple-500 py-2 rounded text-sm font-bold">Video</button>
+            <div class="pt-4 border-t border-slate-800 space-y-2">
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Friend's Name</label>
+                <input id="peer-id" type="text" placeholder="Enter friend's name" class="w-full bg-slate-900/50 border border-slate-700 p-3 rounded-xl text-sm outline-none">
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="connectToPeer()" class="bg-slate-800 hover:bg-slate-700 py-3 rounded-xl text-sm font-bold border border-slate-700">Chat</button>
+                    <button onclick="makeCall()" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl text-sm font-bold shadow-lg shadow-cyan-900/20">Video</button>
                 </div>
             </div>
-
-            <div id="status" class="text-xs text-yellow-500 font-mono">● Waiting for connection...</div>
         </div>
 
-        <!-- Chat & Video Area -->
-        <div class="flex-1 flex flex-col p-6 gap-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="video-box relative">
-                    <video id="local-video" autoplay muted class="w-full h-full object-cover"></video>
-                    <span class="absolute bottom-2 left-2 bg-black/50 text-[10px] px-2 py-1 rounded">You</span>
+        <!-- Main Area -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <!-- Video Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="vid-card relative aspect-video border border-slate-800">
+                    <video id="local-video" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                    <div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-[10px] backdrop-blur-md">Me</div>
                 </div>
-                <div class="video-box relative">
-                    <video id="remote-video" autoplay class="w-full h-full object-cover"></video>
-                    <span class="absolute bottom-2 left-2 bg-black/50 text-[10px] px-2 py-1 rounded">Friend</span>
+                <div class="vid-card relative aspect-video border border-slate-800">
+                    <video id="remote-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-full text-[10px] backdrop-blur-md">Friend</div>
                 </div>
             </div>
 
-            <div id="chat-box" class="flex-1 h-64 overflow-y-auto bg-black/20 rounded-xl p-4 flex flex-col gap-2">
-                <div class="text-gray-500 text-center text-xs">Messages appear here</div>
-            </div>
-
-            <div class="flex gap-2">
-                <input id="message-input" type="text" placeholder="Message..." class="flex-1 bg-black/40 border border-white/10 p-3 rounded-xl focus:outline-none">
-                <button onclick="sendMessage()" class="bg-blue-600 px-6 rounded-xl hover:bg-blue-500 font-bold">Send</button>
+            <!-- Chat Box -->
+            <div class="glass flex-1 flex flex-col rounded-3xl min-h-[400px] overflow-hidden">
+                <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 text-sm scroll-smooth">
+                    <div class="text-slate-600 text-center py-10">Choose a name and connect to start chatting.</div>
+                </div>
+                <div class="p-4 bg-slate-900/30 border-t border-slate-800 flex gap-3">
+                    <input id="message-input" type="text" placeholder="Type something..." class="flex-1 bg-transparent px-4 focus:outline-none">
+                    <button onclick="sendMessage()" class="bg-blue-600 px-6 py-2 rounded-full font-bold hover:bg-blue-500 transition-all">Send</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const peer = new Peer(); // Free Cloud Server provided by PeerJS
-        let conn;
+        let peer, conn;
 
-        // 1. Get your ID
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
-        });
+        function initPeer() {
+            const myName = document.getElementById('custom-id').value;
+            if (!myName) return alert("Pick a name first!");
 
-        // 2. Handle incoming text connection
-        peer.on('connection', c => {
-            conn = c;
-            setupChatListeners();
-            document.getElementById('status').innerText = "● Connected to Friend";
-            document.getElementById('status').className = "text-xs text-green-500 font-mono";
-        });
+            // Using Google STUN servers to bypass school firewalls
+            peer = new Peer(myName, {
+                config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] },
+                debug: 3
+            });
 
-        // 3. Handle incoming video call
-        peer.on('call', async call => {
-            if(confirm("Incoming Call! Answer?")) {
+            peer.on('open', id => {
+                document.getElementById('status').innerText = "● Online as: " + id;
+                document.getElementById('status').className = "text-[11px] text-green-400 font-mono mt-2";
+                document.getElementById('init-btn').disabled = true;
+                document.getElementById('init-btn').innerText = "Online";
+                document.getElementById('init-btn').className = "bg-green-900/20 text-green-400 py-3 rounded-xl font-bold cursor-default border border-green-900/50";
+            });
+
+            peer.on('connection', c => {
+                conn = c;
+                setupChat();
+            });
+
+            peer.on('call', async call => {
                 const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
                 document.getElementById('local-video').srcObject = stream;
                 call.answer(stream);
                 call.on('stream', remoteStream => {
                     document.getElementById('remote-video').srcObject = remoteStream;
                 });
-            }
-        });
+            });
 
-        // Function to Connect manually
-        function connectToPeer() {
-            const peerId = document.getElementById('peer-id').value;
-            conn = peer.connect(peerId);
-            setupChatListeners();
-            document.getElementById('status').innerText = "● Connected to Friend";
-            document.getElementById('status').className = "text-xs text-green-500 font-mono";
+            peer.on('error', err => {
+                alert("Error: " + err.type + ". Try a different name!");
+                console.error(err);
+            });
         }
 
-        function setupChatListeners() {
-            conn.on('data', data => {
-                appendMessage(data, 'friend');
+        function connectToPeer() {
+            const targetId = document.getElementById('peer-id').value;
+            conn = peer.connect(targetId);
+            setupChat();
+        }
+
+        function setupChat() {
+            conn.on('open', () => {
+                appendMessage("System", "Connected to " + conn.peer, "system");
             });
+            conn.on('data', data => appendMessage("Friend", data, "friend"));
         }
 
         function sendMessage() {
             const msg = document.getElementById('message-input').value;
-            if(conn && msg) {
+            if (conn && msg) {
                 conn.send(msg);
-                appendMessage(msg, 'me');
+                appendMessage("Me", msg, "me");
                 document.getElementById('message-input').value = "";
             }
         }
 
         async function makeCall() {
-            const peerId = document.getElementById('peer-id').value;
+            const targetId = document.getElementById('peer-id').value;
             const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
             document.getElementById('local-video').srcObject = stream;
-            const call = peer.call(peerId, stream);
+            const call = peer.call(targetId, stream);
             call.on('stream', remoteStream => {
                 document.getElementById('remote-video').srcObject = remoteStream;
             });
         }
 
-        function appendMessage(txt, sender) {
-            const chat = document.getElementById('chat-box');
+        function appendMessage(sender, text, type) {
+            const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = sender === 'me' ? "bg-blue-600 self-end p-2 rounded-lg max-w-[80%] text-sm" : "bg-white/10 self-start p-2 rounded-lg max-w-[80%] text-sm";
-            div.innerText = txt;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        function copyID() {
-            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("ID Copied! Send it to your friend.");
+            const align = type === 'me' ? 'text-right' : 'text-left';
+            const color = type === 'me' ? 'text-blue-400' : (type === 'system' ? 'text-slate-500' : 'text-cyan-400');
+            
+            div.className = `${align} animate-fade-in`;
+            div.innerHTML = `<span class="text-[10px] font-bold uppercase opacity-50 block">${sender}</span>
+                             <div class="inline-block mt-1 p-3 rounded-2xl ${type === 'me' ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-slate-800 border border-slate-700'}">${text}</div>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
     </script>
 </body>
