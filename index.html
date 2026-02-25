@@ -3,153 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CallPlay - Firewall Patch</title>
-    <script src="https://unpkg.com"></script>
+    <title>CALLPLAY | UNBLOCKABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #020617; font-family: 'Segoe UI', sans-serif; color: white; }
-        .glass { background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(59, 130, 246, 0.2); backdrop-filter: blur(10px); }
-        #chat-box::-webkit-scrollbar { width: 4px; }
-        #chat-box::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        @import url('https://fonts.googleapis.com');
+        body { background: #050505; color: #fff; font-family: sans-serif; overflow: hidden; }
+        .tuff-logo { font-family: 'Orbitron'; font-size: 2.5rem; background: linear-gradient(90deg, #ff0055, #00f2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px #ff0055); text-transform: uppercase; font-style: italic; }
+        .glass { background: rgba(15, 15, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); }
+        textarea { background: #111 !important; border: 1px solid #333 !important; color: #00f2ff !important; font-family: monospace; font-size: 10px; resize: none; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: #555; }
+        .active .status-dot { background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
-    <div class="glass w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[85vh]">
-        <!-- Sidebar -->
-        <div class="w-full md:w-80 p-6 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col gap-6">
-            <h1 class="text-2xl font-black text-blue-500 italic">CALLPLAY v2</h1>
-            
-            <div class="space-y-2">
-                <p class="text-[10px] uppercase font-bold text-slate-500 tracking-tighter">1. Set Your Name</p>
-                <input id="my-name" type="text" placeholder="Your Name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm focus:border-blue-500 outline-none">
-                <button onclick="goOnline()" id="online-btn" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold text-sm transition-all">Go Online</button>
-            </div>
+    <div class="glass w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
+        <!-- Manual Signal Sidebar -->
+        <div class="w-full md:w-80 p-6 border-r border-white/5 flex flex-col gap-4 overflow-y-auto">
+            <h1 class="tuff-logo">CallPlay</h1>
+            <p class="text-[10px] text-white/30 font-bold uppercase tracking-widest -mt-4 mb-4">Manual_Link_v3</p>
 
-            <div class="space-y-2">
-                <p class="text-[10px] uppercase font-bold text-slate-500 tracking-tighter">2. Connect to Friend</p>
-                <input id="friend-name" type="text" placeholder="Friend's Name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-xl text-sm outline-none">
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="startChat()" class="bg-slate-800 hover:bg-slate-700 py-3 rounded-xl text-xs font-bold border border-slate-700">Chat</button>
-                    <button onclick="startCall()" class="bg-cyan-600 hover:bg-cyan-500 py-3 rounded-xl text-xs font-bold">Video</button>
+            <div class="space-y-4">
+                <button onclick="createOffer()" class="w-full bg-white text-black py-3 rounded-xl font-black text-xs hover:bg-cyan-400 transition-all uppercase">1. Generate My Signal</button>
+                <textarea id="my-signal" placeholder="Your signal will appear here..." class="w-full h-24 p-2 rounded-lg outline-none"></textarea>
+                <button onclick="copySignal()" class="w-full bg-zinc-800 py-2 rounded-lg text-[10px] font-bold">Copy & Send to Friend</button>
+
+                <div class="pt-4 border-t border-white/10">
+                    <p class="text-[10px] text-zinc-500 font-bold mb-2">2. Paste Friend's Signal</p>
+                    <textarea id="friend-signal" placeholder="Paste friend's code here..." class="w-full h-24 p-2 rounded-lg outline-none"></textarea>
+                    <button onclick="connectFriend()" class="w-full bg-cyan-600 py-3 rounded-xl font-black text-xs mt-2 uppercase">Connect Link</button>
                 </div>
             </div>
 
-            <div id="status" class="mt-auto text-[11px] text-yellow-500 font-mono italic">Status: Offline</div>
+            <div id="status-box" class="mt-auto pt-4 flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase">
+                <span class="status-dot"></span> <span id="status-text">Disconnected</span>
+            </div>
         </div>
 
-        <!-- Content -->
-        <div class="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
-            <div class="grid grid-cols-2 gap-4 h-48 sm:h-64">
-                <div class="bg-black rounded-2xl border border-slate-800 relative overflow-hidden">
+        <!-- Main Feed -->
+        <div class="flex-1 flex flex-col p-6 gap-6">
+            <div class="grid grid-cols-2 gap-4 h-1/2">
+                <div class="bg-black rounded-3xl relative overflow-hidden border border-white/5">
                     <video id="local-v" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                    <div class="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-[10px]">Me</div>
+                    <div class="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 uppercase">Local</div>
                 </div>
-                <div class="bg-black rounded-2xl border border-slate-800 relative overflow-hidden">
+                <div class="bg-black rounded-3xl relative overflow-hidden border border-cyan-500/30">
                     <video id="remote-v" autoplay playsinline class="w-full h-full object-cover"></video>
-                    <div class="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-[10px]">Friend</div>
+                    <div class="absolute bottom-4 left-4 bg-cyan-500 text-black px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">Peer</div>
                 </div>
             </div>
 
-            <div id="chat-box" class="flex-1 bg-slate-900/50 rounded-2xl p-4 overflow-y-auto flex flex-col gap-3 border border-slate-800">
-                <div class="text-slate-600 text-center text-xs mt-10">Welcome! Go online to start.</div>
-            </div>
-
-            <div class="flex gap-2">
-                <input id="msg-in" type="text" placeholder="Message..." class="flex-1 bg-slate-800 border border-slate-700 p-3 rounded-xl outline-none focus:border-blue-500">
-                <button onclick="send()" class="bg-blue-600 px-6 rounded-xl hover:bg-blue-500 font-bold transition-all">Send</button>
+            <div class="flex-1 bg-white/[0.02] rounded-3xl p-6 flex flex-col gap-4 border border-white/5 overflow-hidden">
+                <div id="chat-box" class="flex-1 overflow-y-auto space-y-2 text-sm font-medium">
+                    <div class="text-zinc-600 text-center py-10 text-xs font-bold uppercase tracking-widest opacity-40 italic">Signal Exchange Required For Comms</div>
+                </div>
+                <div class="flex gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
+                    <input id="msg-in" type="text" placeholder="TRANSMIT MESSAGE..." class="flex-1 bg-transparent px-4 outline-none text-sm">
+                    <button onclick="sendMsg()" class="bg-white text-black px-6 py-2 rounded-xl font-black text-[10px]">SEND</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let peer, conn;
-        const statusEl = document.getElementById('status');
+        let pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+        let dc;
 
-        // Firewall Patch: Using Google and OpenRelay STUN/TURN servers
-        const peerConfig = {
-            config: {
-                'iceServers': [
-                    { 'urls': 'stun:stun.l.google.com:19302' },
-                    { 'urls': 'stun:stun1.l.google.com:19302' },
-                    { 'urls': 'stun:openrelay.metered.ca:80' }
-                ]
-            }
+        // Set up Local Stream
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
+            document.getElementById('local-v').srcObject = s;
+            s.getTracks().forEach(t => pc.addTrack(t, s));
+        });
+
+        pc.ontrack = e => document.getElementById('remote-v').srcObject = e.streams[0];
+        
+        pc.ondatachannel = e => {
+            dc = e.channel;
+            setupDataHandlers();
         };
 
-        function goOnline() {
-            const name = document.getElementById('my-name').value;
-            if (!name) return alert("Enter a name first!");
-
-            // Connecting with bypass config
-            peer = new Peer(name, peerConfig);
-
-            peer.on('open', (id) => {
-                statusEl.innerText = "Status: Online as " + id;
-                statusEl.className = "mt-auto text-[11px] text-green-400 font-mono italic";
-                document.getElementById('online-btn').innerText = "Online";
-                document.getElementById('online-btn').className = "w-full bg-green-900/30 text-green-400 py-3 rounded-xl font-bold cursor-default border border-green-800/50";
-            });
-
-            peer.on('connection', (c) => {
-                conn = c;
-                setupChat();
-            });
-
-            peer.on('call', async (call) => {
-                const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-                document.getElementById('local-v').srcObject = stream;
-                call.answer(stream);
-                call.on('stream', (remoteStream) => {
-                    document.getElementById('remote-v').srcObject = remoteStream;
-                });
-            });
-
-            peer.on('error', (err) => {
-                statusEl.innerText = "Error: " + err.type;
-                console.error(err);
-            });
+        async function createOffer() {
+            dc = pc.createDataChannel("chat");
+            setupDataHandlers();
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            // Wait for ICE candidates
+            pc.onicecandidate = e => {
+                if (!e.candidate) document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
+            };
         }
 
-        function startChat() {
-            const friend = document.getElementById('friend-name').value;
-            conn = peer.connect(friend);
-            setupChat();
-        }
-
-        function setupChat() {
-            conn.on('open', () => appendMsg("System", "Connected to friend!", "system"));
-            conn.on('data', (data) => appendMsg("Friend", data, "friend"));
-        }
-
-        function send() {
-            const msg = document.getElementById('msg-in').value;
-            if (conn && msg) {
-                conn.send(msg);
-                appendMsg("Me", msg, "me");
-                document.getElementById('msg-in').value = "";
+        async function connectFriend() {
+            const signal = JSON.parse(document.getElementById('friend-signal').value);
+            if (signal.type === "offer") {
+                await pc.setRemoteDescription(signal);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
+                alert("Now copy YOUR signal and send it back to your friend!");
+            } else {
+                await pc.setRemoteDescription(signal);
             }
         }
 
-        async function startCall() {
-            const friend = document.getElementById('friend-name').value;
-            const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-            document.getElementById('local-v').srcObject = stream;
-            const call = peer.call(friend, stream);
-            call.on('stream', (remoteStream) => {
-                document.getElementById('remote-v').srcObject = remoteStream;
-            });
+        function setupDataHandlers() {
+            dc.onopen = () => {
+                document.getElementById('status-box').classList.add('active');
+                document.getElementById('status-text').innerText = "Link Active";
+                appendMsg("System", "Comms established!", "system");
+            };
+            dc.onmessage = e => appendMsg("Friend", e.data, "friend");
+        }
+
+        function sendMsg() {
+            const m = document.getElementById('msg-in').value;
+            if (dc && m) {
+                dc.send(m);
+                appendMsg("Me", m, "me");
+                document.getElementById('msg-in').value = "";
+            }
         }
 
         function appendMsg(who, text, type) {
             const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = type === 'me' ? "bg-blue-600/20 border border-blue-500/50 self-end p-3 rounded-2xl rounded-tr-none max-w-[80%]" : 
-                            type === 'system' ? "text-slate-500 text-[10px] text-center italic" : 
-                            "bg-slate-800 border border-slate-700 self-start p-3 rounded-2xl rounded-tl-none max-w-[80%]";
-            div.innerHTML = `<span class="text-[9px] uppercase font-bold block opacity-50 mb-1">${who}</span>${text}`;
+            div.className = type === 'me' ? "text-right" : "text-left";
+            const color = type === 'me' ? "text-cyan-400" : (type === 'system' ? "text-zinc-600 italic" : "text-white");
+            div.innerHTML = `<span class="text-[9px] font-black opacity-40 uppercase">${who}</span><p class="${color} font-bold">${text}</p>`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
+        }
+
+        function copySignal() {
+            document.getElementById('my-signal').select();
+            document.execCommand('copy');
         }
     </script>
 </body>
