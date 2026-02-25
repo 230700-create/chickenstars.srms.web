@@ -1,42 +1,133 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CallPlay Chat</title>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <!-- PeerJS for No-Backend Calling/Messaging -->
+  <script src="https://unpkg.com"></script>
+  <!-- Tailwind CSS for Beautiful Styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Inter', sans-serif; }
+    .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+    #chat-box::-webkit-scrollbar { width: 5px; }
+    #chat-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+  </style>
 </head>
-<body>
-  <h2>CallPlay Chat</h2>
+<body class="flex items-center justify-center p-4">
 
-  <input id="username" placeholder="Username" />
-  <input id="room" placeholder="Room Name" />
-  <button onclick="joinRoom()">Join</button>
+  <div class="glass w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[80vh]">
+    <!-- Sidebar: Connection Info -->
+    <div class="w-full md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-white/20 flex flex-col gap-4">
+      <h2 class="text-white text-2xl font-bold mb-2">CallPlay Chat</h2>
+      
+      <div>
+        <label class="text-white/70 text-xs uppercase font-bold">Your ID (Give this to friends)</label>
+        <div id="my-id" class="bg-white/10 p-3 rounded-xl text-white font-mono break-all mt-1 select-all cursor-pointer">Loading ID...</div>
+      </div>
 
-  <div id="chat"></div>
+      <div class="mt-4">
+        <label class="text-white/70 text-xs uppercase font-bold">Friend's ID</label>
+        <input id="friend-id" type="text" placeholder="Paste ID here..." class="w-full bg-white/10 border border-white/20 p-3 rounded-xl text-white mt-1 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-400">
+      </div>
 
-  <input id="message" placeholder="Message" />
-  <button onclick="sendMessage()">Send</button>
+      <button onclick="connectToFriend()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">Connect & Chat</button>
+      <button onclick="startCall()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">Start Video Call</button>
+      
+      <div class="mt-auto hidden md:block">
+        <video id="local-video" autoplay muted class="rounded-xl border border-white/20 bg-black/20 w-full"></video>
+        <p class="text-white/50 text-[10px] text-center mt-2">Self Preview</p>
+      </div>
+    </div>
+
+    <!-- Main: Chat & Video -->
+    <div class="flex-1 flex flex-col relative">
+      <!-- Remote Video Overlay -->
+      <video id="remote-video" autoplay class="absolute top-4 right-4 w-40 h-40 rounded-2xl border-2 border-purple-400 shadow-2xl bg-black hidden"></video>
+
+      <div id="chat-box" class="flex-1 p-6 overflow-y-auto flex flex-col gap-3">
+        <div class="text-white/40 text-center text-sm italic">Enter a friend's ID to start talking...</div>
+      </div>
+
+      <div class="p-4 bg-black/10 border-t border-white/10 flex gap-2">
+        <input id="msg-input" type="text" placeholder="Type a message..." class="flex-1 bg-white/10 border border-white/20 p-3 rounded-full text-white placeholder-white/40 focus:outline-none">
+        <button onclick="sendMsg()" class="bg-white text-purple-700 px-6 rounded-full font-bold hover:bg-purple-100 transition-all active:scale-90">Send</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const socket = io("http://localhost:5000");
+    const myPeer = new Peer(); // Connects to PeerJS cloud for free
+    let conn;
+    let localStream;
 
-    function joinRoom() {
-      const username = document.getElementById("username").value;
-      const room = document.getElementById("room").value;
+    myPeer.on('open', (id) => {
+      document.getElementById('my-id').innerText = id;
+    });
 
-      socket.emit("join_room", { username, room });
+    // Handle Incoming Chat Connection
+    myPeer.on('connection', (connection) => {
+      conn = connection;
+      setupChat();
+    });
 
-      socket.on("receive_message", (data) => {
-        const chat = document.getElementById("chat");
-        chat.innerHTML += `<p><b>${data.username}:</b> ${data.message} (${data.time})</p>`;
-      });
+    // Handle Incoming Video Call
+    myPeer.on('call', async (call) => {
+      if (confirm("Incoming Video Call! Answer?")) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        call.answer(stream);
+        handleStream(call);
+      }
+    });
+
+    function connectToFriend() {
+      const fId = document.getElementById('friend-id').value;
+      conn = myPeer.connect(fId);
+      setupChat();
     }
 
-    function sendMessage() {
-      const message = document.getElementById("message").value;
-      const username = document.getElementById("username").value;
-      const room = document.getElementById("room").value;
+    function setupChat() {
+      conn.on('data', (data) => {
+        appendMsg(data, 'friend');
+      });
+      appendMsg("System: Connected to friend!", 'system');
+    }
 
-      socket.emit("send_message", { room, message, username });
+    function sendMsg() {
+      const msg = document.getElementById('msg-input').value;
+      if (conn && msg) {
+        conn.send(msg);
+        appendMsg(msg, 'me');
+        document.getElementById('msg-input').value = '';
+      }
+    }
+
+    function appendMsg(text, sender) {
+      const box = document.getElementById('chat-box');
+      const div = document.createElement('div');
+      div.className = sender === 'me' ? "bg-purple-500 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[80%]" : 
+                      sender === 'system' ? "text-white/40 text-xs text-center" : 
+                      "bg-white/20 text-white p-3 rounded-2xl rounded-tl-none self-start max-w-[80%]";
+      div.innerText = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function startCall() {
+      const fId = document.getElementById('friend-id').value;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      document.getElementById('local-video').srcObject = stream;
+      const call = myPeer.call(fId, stream);
+      handleStream(call);
+    }
+
+    function handleStream(call) {
+      const remoteVideo = document.getElementById('remote-video');
+      call.on('stream', (remoteStream) => {
+        remoteVideo.srcObject = remoteStream;
+        remoteVideo.classList.remove('hidden');
+      });
     }
   </script>
 </body>
