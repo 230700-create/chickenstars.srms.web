@@ -7,105 +7,152 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com');
-        body { background: #050505; color: #fff; font-family: sans-serif; overflow: hidden; }
-        .tuff-logo { font-family: 'Orbitron'; font-size: 2.5rem; background: linear-gradient(90deg, #ff0055, #00f2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px #ff0055); text-transform: uppercase; font-style: italic; }
-        .glass { background: rgba(15, 15, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); }
-        textarea { background: #111 !important; border: 1px solid #333 !important; color: #00f2ff !important; font-family: monospace; font-size: 10px; resize: none; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: #555; }
+        body { background: #050505; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        .tuff-logo { font-family: 'Orbitron'; font-size: 2rem; background: linear-gradient(90deg, #ff0055, #00f2ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 8px #ff0055); text-transform: uppercase; font-style: italic; }
+        .glass { background: rgba(15, 15, 25, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); }
+        textarea { background: #0a0a0a !important; border: 1px solid #222 !important; color: #00f2ff !important; font-family: monospace; font-size: 10px; resize: none; transition: all 0.3s; }
+        textarea:focus { border-color: #00f2ff !important; outline: none; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #ff0055; transition: 0.3s; }
         .active .status-dot { background: #00f2ff; box-shadow: 0 0 10px #00f2ff; }
+        #chat-box::-webkit-scrollbar { width: 4px; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="flex items-center justify-center p-4">
 
-    <div class="glass w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh]">
-        <!-- Manual Signal Sidebar -->
+    <div class="glass w-full max-w-6xl rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh] shadow-2xl">
+        
+        <!-- SIDEBAR: SIGNALING -->
         <div class="w-full md:w-80 p-6 border-r border-white/5 flex flex-col gap-4 overflow-y-auto">
             <h1 class="tuff-logo">CallPlay</h1>
             <p class="text-[10px] text-white/30 font-bold uppercase tracking-widest -mt-4 mb-4">Manual_Link_v3</p>
 
             <div class="space-y-4">
-                <button onclick="createOffer()" class="w-full bg-white text-black py-3 rounded-xl font-black text-xs hover:bg-cyan-400 transition-all uppercase">1. Generate My Signal</button>
-                <textarea id="my-signal" placeholder="Your signal will appear here..." class="w-full h-24 p-2 rounded-lg outline-none"></textarea>
-                <button onclick="copySignal()" class="w-full bg-zinc-800 py-2 rounded-lg text-[10px] font-bold">Copy & Send to Friend</button>
+                <div>
+                    <button onclick="createOffer()" class="w-full bg-white text-black py-3 rounded-xl font-black text-xs hover:bg-cyan-400 transition-all uppercase mb-2">1. Generate My Signal</button>
+                    <textarea id="my-signal" readonly placeholder="Your signal will appear here..." class="w-full h-28 p-3 rounded-xl"></textarea>
+                    <button onclick="copySignal()" class="w-full bg-zinc-800 py-2 rounded-lg text-[10px] font-bold mt-1 hover:bg-zinc-700">COPY SIGNAL</button>
+                </div>
 
                 <div class="pt-4 border-t border-white/10">
-                    <p class="text-[10px] text-zinc-500 font-bold mb-2">2. Paste Friend's Signal</p>
-                    <textarea id="friend-signal" placeholder="Paste friend's code here..." class="w-full h-24 p-2 rounded-lg outline-none"></textarea>
-                    <button onclick="connectFriend()" class="w-full bg-cyan-600 py-3 rounded-xl font-black text-xs mt-2 uppercase">Connect Link</button>
+                    <p class="text-[10px] text-zinc-500 font-bold mb-2 uppercase tracking-tighter">2. Paste Friend's Signal</p>
+                    <textarea id="friend-signal" placeholder="Paste code from friend here..." class="w-full h-28 p-3 rounded-xl"></textarea>
+                    <button onclick="connectFriend()" class="w-full bg-cyan-600 py-3 rounded-xl font-black text-xs mt-2 uppercase hover:bg-cyan-500 shadow-lg shadow-cyan-900/20">Connect Link</button>
                 </div>
             </div>
 
             <div id="status-box" class="mt-auto pt-4 flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase">
-                <span class="status-dot"></span> <span id="status-text">Disconnected</span>
+                <span class="status-dot"></span> <span id="status-text">Offline</span>
             </div>
         </div>
 
-        <!-- Main Feed -->
-        <div class="flex-1 flex flex-col p-6 gap-6">
-            <div class="grid grid-cols-2 gap-4 h-1/2">
-                <div class="bg-black rounded-3xl relative overflow-hidden border border-white/5">
+        <!-- MAIN CONTENT: VIDEO & CHAT -->
+        <div class="flex-1 flex flex-col p-6 gap-6 bg-black/20">
+            <!-- Video Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 h-1/2">
+                <div class="bg-black rounded-3xl relative overflow-hidden border border-white/5 shadow-inner">
                     <video id="local-v" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                    <div class="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 uppercase">Local</div>
+                    <div class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 uppercase">Local_Feed</div>
                 </div>
-                <div class="bg-black rounded-3xl relative overflow-hidden border border-cyan-500/30">
+                <div class="bg-black rounded-3xl relative overflow-hidden border border-cyan-500/20 shadow-inner">
                     <video id="remote-v" autoplay playsinline class="w-full h-full object-cover"></video>
-                    <div class="absolute bottom-4 left-4 bg-cyan-500 text-black px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">Peer</div>
+                    <div class="absolute bottom-4 left-4 bg-cyan-500 text-black px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">Peer_Feed</div>
                 </div>
             </div>
 
+            <!-- Chat Interface -->
             <div class="flex-1 bg-white/[0.02] rounded-3xl p-6 flex flex-col gap-4 border border-white/5 overflow-hidden">
-                <div id="chat-box" class="flex-1 overflow-y-auto space-y-2 text-sm font-medium">
+                <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2">
                     <div class="text-zinc-600 text-center py-10 text-xs font-bold uppercase tracking-widest opacity-40 italic">Signal Exchange Required For Comms</div>
                 </div>
-                <div class="flex gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
-                    <input id="msg-in" type="text" placeholder="TRANSMIT MESSAGE..." class="flex-1 bg-transparent px-4 outline-none text-sm">
-                    <button onclick="sendMsg()" class="bg-white text-black px-6 py-2 rounded-xl font-black text-[10px]">SEND</button>
+                
+                <div class="flex gap-2 bg-black/60 p-2 rounded-2xl border border-white/10 focus-within:border-cyan-500/50 transition-all">
+                    <input id="msg-in" type="text" placeholder="TRANSMIT MESSAGE..." class="flex-1 bg-transparent px-4 outline-none text-sm font-medium">
+                    <button onclick="sendMsg()" class="bg-white text-black px-6 py-3 rounded-xl font-black text-[10px] hover:bg-cyan-400 transition-all">SEND</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let pc = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-        });
+        // WEB RTC CONFIG
+        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
+        let pc = new RTCPeerConnection(config);
         let dc;
 
-        // Set up Local Stream
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
-            document.getElementById('local-v').srcObject = s;
-            s.getTracks().forEach(t => pc.addTrack(t, s));
-        });
+        // Initialize Camera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-v').srcObject = stream;
+                stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            } catch (e) {
+                appendMsg("System", "Camera/Mic access denied.", "system");
+            }
+        }
+        initCamera();
 
-        pc.ontrack = e => document.getElementById('remote-v').srcObject = e.streams[0];
-        
+        // Handle incoming Remote Stream
+        pc.ontrack = e => {
+            if (e.streams && e.streams[0]) {
+                document.getElementById('remote-v').srcObject = e.streams[0];
+            }
+        };
+
+        // Handle incoming Data Channel (for the receiver)
         pc.ondatachannel = e => {
             dc = e.channel;
             setupDataHandlers();
         };
 
+        // STEP 1: Create Offer (Peer A)
         async function createOffer() {
             dc = pc.createDataChannel("chat");
             setupDataHandlers();
+
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
+
+            document.getElementById('status-text').innerText = "Gathering Candidates...";
             
-            // Wait for ICE candidates
+            // Wait for ICE candidates to bundle into the SDP
             pc.onicecandidate = e => {
-                if (!e.candidate) document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
+                if (!e.candidate) {
+                    document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
+                    document.getElementById('status-text').innerText = "Signal Ready";
+                }
             };
         }
 
+        // STEP 2: Handle Friend's Signal (Connect)
         async function connectFriend() {
-            const signal = JSON.parse(document.getElementById('friend-signal').value);
-            if (signal.type === "offer") {
-                await pc.setRemoteDescription(signal);
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
-                alert("Now copy YOUR signal and send it back to your friend!");
-            } else {
-                await pc.setRemoteDescription(signal);
+            const input = document.getElementById('friend-signal').value.trim();
+            if (!input) return alert("Please paste a signal code first.");
+
+            try {
+                const signal = JSON.parse(input);
+
+                if (signal.type === "offer") {
+                    // Receiver Logic
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+
+                    document.getElementById('status-text').innerText = "Generating Answer...";
+                    pc.onicecandidate = e => {
+                        if (!e.candidate) {
+                            document.getElementById('my-signal').value = JSON.stringify(pc.localDescription);
+                            document.getElementById('status-text').innerText = "Send Answer Back";
+                            alert("Answer Generated! Copy your signal and send it back to Peer A.");
+                        }
+                    };
+                } else if (signal.type === "answer") {
+                    // Sender Logic
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                    document.getElementById('status-text').innerText = "Finalizing...";
+                }
+            } catch (err) {
+                alert("Invalid signal format. Make sure you copied the entire code.");
             }
         }
 
@@ -113,34 +160,58 @@
             dc.onopen = () => {
                 document.getElementById('status-box').classList.add('active');
                 document.getElementById('status-text').innerText = "Link Active";
-                appendMsg("System", "Comms established!", "system");
+                document.getElementById('chat-box').innerHTML = ""; // Clear welcome text
+                appendMsg("System", "Secure P2P Tunnel Established.", "system");
             };
-            dc.onmessage = e => appendMsg("Friend", e.data, "friend");
+            dc.onmessage = e => appendMsg("Peer", e.data, "peer");
+            dc.onclose = () => {
+                document.getElementById('status-box').classList.remove('active');
+                document.getElementById('status-text').innerText = "Disconnected";
+            };
         }
 
         function sendMsg() {
-            const m = document.getElementById('msg-in').value;
-            if (dc && m) {
-                dc.send(m);
-                appendMsg("Me", m, "me");
-                document.getElementById('msg-in').value = "";
+            const input = document.getElementById('msg-in');
+            if (dc && dc.readyState === "open" && input.value) {
+                dc.send(input.value);
+                appendMsg("You", input.value, "me");
+                input.value = "";
             }
         }
 
         function appendMsg(who, text, type) {
             const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            div.className = type === 'me' ? "text-right" : "text-left";
-            const color = type === 'me' ? "text-cyan-400" : (type === 'system' ? "text-zinc-600 italic" : "text-white");
-            div.innerHTML = `<span class="text-[9px] font-black opacity-40 uppercase">${who}</span><p class="${color} font-bold">${text}</p>`;
+            
+            if (type === 'system') {
+                div.className = "text-center text-[10px] text-zinc-500 font-bold uppercase tracking-widest";
+                div.innerText = text;
+            } else {
+                div.className = type === 'me' ? "flex flex-col items-end" : "flex flex-col items-start";
+                const color = type === 'me' ? "bg-cyan-500 text-black" : "bg-white/10 text-white";
+                div.innerHTML = `
+                    <span class="text-[8px] font-black opacity-30 uppercase mb-1">${who}</span>
+                    <div class="px-4 py-2 rounded-2xl max-w-[80%] font-bold text-sm ${color}">${text}</div>
+                `;
+            }
+            
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
 
         function copySignal() {
-            document.getElementById('my-signal').select();
+            const el = document.getElementById('my-signal');
+            el.select();
             document.execCommand('copy');
+            const btn = event.target;
+            btn.innerText = "COPIED!";
+            setTimeout(() => btn.innerText = "COPY SIGNAL", 2000);
         }
+
+        // Enter key to send
+        document.getElementById('msg-in').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMsg();
+        });
     </script>
 </body>
 </html>
