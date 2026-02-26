@@ -1,145 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CallPlay - P2P Chat & Video</title>
-    <!-- PeerJS Library (No backend needed) -->
-    <script src="https://unpkg.com"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-        .video-box { aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
-    </style>
-</head>
-<body class="flex flex-col items-center p-6 min-h-screen">
+"></script>
 
-    <div class="glass w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl">
-        <!-- Control Panel -->
-        <div class="p-6 md:w-80 border-r border-white/10 flex flex-col gap-6">
-            <h1 class="text-2xl font-black text-blue-400 italic">CALLPLAY</h1>
-            
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase">Your Personal ID</p>
-                <div class="flex items-center gap-2 mt-2">
-                    <code id="my-id" class="bg-black/40 p-2 rounded flex-1 text-sm truncate">Connecting...</code>
-                    <button onclick="copyID()" class="bg-blue-600 hover:bg-blue-500 p-2 rounded text-xs">Copy</button>
-                </div>
-            </div>
+<script>
+    let peer, conn, localStream;
+    const statusText = document.getElementById('status-text');
 
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase">Friend's ID</p>
-                <input id="peer-id" type="text" placeholder="Paste ID here" class="w-full bg-black/40 border border-white/10 p-2 rounded mt-2 text-sm">
-                <div class="flex gap-2 mt-2">
-                    <button onclick="connectToPeer()" class="flex-1 bg-green-600 hover:bg-green-500 py-2 rounded text-sm font-bold">Connect</button>
-                    <button onclick="makeCall()" class="flex-1 bg-purple-600 hover:bg-purple-500 py-2 rounded text-sm font-bold">Video</button>
-                </div>
-            </div>
+    // 1. Initial Media Setup
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
+        localStream = s;
+        document.getElementById('local-v').srcObject = s;
+    });
 
-            <div id="status" class="text-xs text-yellow-500 font-mono">● Waiting for connection...</div>
-        </div>
-
-        <!-- Chat & Video Area -->
-        <div class="flex-1 flex flex-col p-6 gap-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="video-box relative">
-                    <video id="local-video" autoplay muted class="w-full h-full object-cover"></video>
-                    <span class="absolute bottom-2 left-2 bg-black/50 text-[10px] px-2 py-1 rounded">You</span>
-                </div>
-                <div class="video-box relative">
-                    <video id="remote-video" autoplay class="w-full h-full object-cover"></video>
-                    <span class="absolute bottom-2 left-2 bg-black/50 text-[10px] px-2 py-1 rounded">Friend</span>
-                </div>
-            </div>
-
-            <div id="chat-box" class="flex-1 h-64 overflow-y-auto bg-black/20 rounded-xl p-4 flex flex-col gap-2">
-                <div class="text-gray-500 text-center text-xs">Messages appear here</div>
-            </div>
-
-            <div class="flex gap-2">
-                <input id="message-input" type="text" placeholder="Message..." class="flex-1 bg-black/40 border border-white/10 p-3 rounded-xl focus:outline-none">
-                <button onclick="sendMessage()" class="bg-blue-600 px-6 rounded-xl hover:bg-blue-500 font-bold">Send</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const peer = new Peer(); // Free Cloud Server provided by PeerJS
-        let conn;
-
-        // 1. Get your ID
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
+    // 2. Global Lobby Logic
+    function joinGlobal() {
+        const room = document.getElementById('room-id').value || "Public";
+        // Create a unique ID with a common prefix for discovery
+        const myId = `${room}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        peer = new Peer(myId, {
+            config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
         });
 
-        // 2. Handle incoming text connection
-        peer.on('connection', c => {
-            conn = c;
-            setupChatListeners();
-            document.getElementById('status').innerText = "● Connected to Friend";
-            document.getElementById('status').className = "text-xs text-green-500 font-mono";
+        peer.on('open', (id) => {
+            statusText.innerText = `Lobby: ${room}`;
+            appendMsg("System", `Joined as ${id}. Looking for strangers...`, "system");
+            findStrangers(room);
         });
 
-        // 3. Handle incoming video call
-        peer.on('call', async call => {
-            if(confirm("Incoming Call! Answer?")) {
-                const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-                document.getElementById('local-video').srcObject = stream;
-                call.answer(stream);
-                call.on('stream', remoteStream => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                });
-            }
+        // Listen for strangers finding YOU
+        peer.on('connection', c => { conn = c; setupChat(); });
+        peer.on('call', call => {
+            call.answer(localStream);
+            call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
         });
+    }
 
-        // Function to Connect manually
-        function connectToPeer() {
-            const peerId = document.getElementById('peer-id').value;
-            conn = peer.connect(peerId);
-            setupChatListeners();
-            document.getElementById('status').innerText = "● Connected to Friend";
-            document.getElementById('status').className = "text-xs text-green-500 font-mono";
+    // 3. Simple Discovery (Tries to connect to a neighbor)
+    function findStrangers(room) {
+        appendMsg("System", "Matching with random peer...", "system");
+        // In a real 'serverless' lobby, you'd share IDs via a public board.
+        // For this rebuild, users manually enter a 'Friend ID' or use a shared 'Room Name'.
+        const target = document.getElementById('friend-name').value;
+        if (target) {
+            conn = peer.connect(target);
+            setupChat();
+            startCall(target);
         }
+    }
 
-        function setupChatListeners() {
-            conn.on('data', data => {
-                appendMessage(data, 'friend');
-            });
-        }
+    function setupChat() {
+        conn.on('open', () => appendMsg("System", "Connected to stranger!", "system"));
+        conn.on('data', data => appendMsg("Stranger", data, "peer"));
+    }
 
-        function sendMessage() {
-            const msg = document.getElementById('message-input').value;
-            if(conn && msg) {
-                conn.send(msg);
-                appendMessage(msg, 'me');
-                document.getElementById('message-input').value = "";
-            }
-        }
+    async function startCall(id) {
+        const call = peer.call(id, localStream);
+        call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
+    }
 
-        async function makeCall() {
-            const peerId = document.getElementById('peer-id').value;
-            const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-            document.getElementById('local-video').srcObject = stream;
-            const call = peer.call(peerId, stream);
-            call.on('stream', remoteStream => {
-                document.getElementById('remote-video').srcObject = remoteStream;
-            });
+    function sendMsg() {
+        const input = document.getElementById('msg-in');
+        if (conn && conn.open && input.value) {
+            conn.send(input.value);
+            appendMsg("You", input.value, "me");
+            input.value = "";
         }
+    }
 
-        function appendMessage(txt, sender) {
-            const chat = document.getElementById('chat-box');
-            const div = document.createElement('div');
-            div.className = sender === 'me' ? "bg-blue-600 self-end p-2 rounded-lg max-w-[80%] text-sm" : "bg-white/10 self-start p-2 rounded-lg max-w-[80%] text-sm";
-            div.innerText = txt;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        function copyID() {
-            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("ID Copied! Send it to your friend.");
-        }
-    </script>
-</body>
-</html>
+    function appendMsg(who, text, type) {
+        const box = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = type === 'me' ? "text-right" : "text-left";
+        const color = type === 'me' ? "text-cyan-400" : (type === 'system' ? "text-zinc-500 italic" : "text-white");
+        div.innerHTML = `<span class="text-[8px] font-black opacity-30 uppercase">${who}</span><p class="${color} font-bold text-sm">${text}</p>`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
